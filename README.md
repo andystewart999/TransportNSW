@@ -8,9 +8,13 @@ An OpenData account and API key is required to request the data. More informatio
 https://opendata.transport.nsw.gov.au/user-guide .
 
 ### Get the stop and line
-The libary will expect at least stop id to request the next leave events. The easieste way to get the ID is using Google Maps and clicking on one of the bus, train or ferry stops. The information pane one the left will show the relevant stop ID.
+The libary will expect at least the stop_id to request the next leave events. The easiest way to get the ID is using Google Maps and clicking on one of the bus, train or ferry stops. The information pane on the left will show the relevant stop ID.
 
 Another source for the stop ID and line is  https://transportnsw.info/stops#/. It provides the option to search for a stop and the corresponding lines leaving from there. 
+
+By default the return is the first journey that fits your criteria.  You can optionally specific a minimum 'due time' (in minutes) to see journeys further in the future, for example to give you time to get to the station.
+
+If possible, general occupancy level and the latitude and longitude of the selected journey's vehicle (train, bus, etc) will be returned.
 
 ### Sample Code
 The following example will request the next leave event for the bus route/line *199* from stop ID *209516*.
@@ -22,18 +26,22 @@ The source API details can be found here: https://opendata.transport.nsw.gov.au/
 ```python
 from TransportNSW import TransportNSW
 tnsw = TransportNSW()
-journey = tnsw.get_departures('209516', '199', '', 'YOUR_API_KEY')
+journey = tnsw.get_departures('2015133', '', '', 'YOUR_API_KEY', 0)
 print(journey)
 ```
 **Result:**
 ```
-{'stop_id': '209516', 'route': '199', 'due': 4, 'delay': 0, 'real_time': 'n', 'destination': 'Palm Beach'}
-```
+{'stop_id': '2015133', 'route': 'T9 Northern Line', 'due': 2, 'delay': 0, 'real_time': 'y', 'destination': 'Gordon via Lindfield', 'mode': 'Train', 'occupancy': 'n/a', 'trip_id': '151V.1287.126.16.A.8.61670049', 'latitude': -33.89567184448242, 'longitude': 151.1886749267578}
+
 * route: bus, train, ferry number
-* due: minutes till next leave
-* real_time: flag if the leave event has real_time information
+* due: minutes until departure
+* real_time: flag if the journey has real_time information
 * delay: delay in minutes from the scheduled leave time
 * destination: end point of the route
+* mode: The type of journey - train, bus, etc
+* occupancy: The overall occupancy of the vehicle, if available
+* trip_id: The unique trip ID, useful for other API calls such as geolocation
+* latitude & longitude: The location of the vehicle, if available
 
 Leaving the line field empty will return any bus/train/ferry leaving next from a given stop.
 **Code:**
