@@ -5,18 +5,18 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="PyTransportNSW",
-    version="0.1.2",
-    author="Dav0815",
+    version="0.1.3",
+    author="andystewart999",
     description="Get transport information from TransportNSW",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/Dav0815/TransportNSW",
+    url="https://github.com/andystewart999/TransportNSW",
     packages=setuptools.find_packages(),
-    classifiers=(
+    classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Intended Audience :: Developers",
         "Topic :: Software Development :: Libraries :: Python Modules",
-    ),
+    ],
 )

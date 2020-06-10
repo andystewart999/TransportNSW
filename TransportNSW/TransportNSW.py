@@ -11,6 +11,7 @@ ATTR_DELAY = 'delay'
 ATTR_REALTIME = 'real_time'
 ATTR_DESTINATION = 'destination'
 ATTR_MODE = 'mode'
+ATTR_OCCUPANCY = 'occupancy'
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,8 @@ class TransportNSW(object):
             ATTR_DELAY: 'n/a',
             ATTR_REALTIME: 'n/a',
             ATTR_DESTINATION: 'n/a',
-            ATTR_MODE: 'n/a'
+            ATTR_MODE: 'n/a',
+            ATTR_OCCUPANCY: 'n/a'
             }
 
     def get_departures(self, stop_id, route, destination, api_key):
@@ -118,7 +120,8 @@ class TransportNSW(object):
                 ATTR_DELAY: monitor[0][2],
                 ATTR_REALTIME: monitor[0][5],
                 ATTR_DESTINATION: monitor[0][6],
-                ATTR_MODE: monitor[0][7]
+                ATTR_MODE: monitor[0][7],
+                ATTR_OCCUPANCY: monitor[0][8]
                 }
         return self.info
 
@@ -128,11 +131,19 @@ class TransportNSW(object):
         due = 0
         delay = 0
         real_time = 'n'
+        occupancy = 'n/a'
+
         number = result['stopEvents'][i]['transportation']['number']
         planned = datetime.strptime(result['stopEvents'][i]
             ['departureTimePlanned'], fmt)
         destination = result['stopEvents'][i]['transportation']['destination']['name']
         mode = self.get_mode(result['stopEvents'][i]['transportation']['product']['class'])
+
+        # See if we can capture the occupancy data
+        if 'properties' in result['stopEvents'][i]['location']:
+            if 'occupancy' in result['stopEvents'][i]['location']['properties']:
+                occupancy = result['stopEvents'][i]['location']['properties']['occupancy']
+
         # Unless realtime data is available the plannned is equal to estimated time
         estimated = planned
         if 'isRealtimeControlled' in result['stopEvents'][i]:
@@ -151,7 +162,8 @@ class TransportNSW(object):
                 estimated,
                 real_time,
                 destination,
-                mode
+                mode,
+                occupancy
                 ]
         else:
             return None
