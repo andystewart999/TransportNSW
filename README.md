@@ -30,8 +30,9 @@ journey = tnsw.get_departures('2015133', '', '', 'YOUR_API_KEY', 0)
 print(journey)
 ```
 **Result:**
-```
+```python
 {'stop_id': '2015133', 'route': 'T9 Northern Line', 'due': 2, 'delay': 0, 'real_time': 'y', 'destination': 'Gordon via Lindfield', 'mode': 'Train', 'occupancy': 'n/a', 'trip_id': '151V.1287.126.16.A.8.61670049', 'latitude': -33.89567184448242, 'longitude': 151.1886749267578}
+```
 
 * route: bus, train, ferry number
 * due: minutes until departure
@@ -49,7 +50,8 @@ Leaving the line field empty will return any bus/train/ferry leaving next from a
 journey = tnsw.get_departures('209516', '', '', 'YOUR_API_KEY')
 ```
 
-Setting a destination will return all lines going there from the stop_id. Example for ferries leaving Balmain Warf towards Circular Quay 
+Setting a destination will return all lines going there from the stop_id. Example for ferries leaving Balmain Warf towards Circular Quay
+
 **Code:**
 ```python
 journey = tnsw.get_departures('10102008','','Circular Quay' 'YOUR_API_KEY')
