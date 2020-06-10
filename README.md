@@ -45,6 +45,7 @@ print(journey)
 * latitude & longitude: The location of the vehicle, if available
 
 Leaving the line field empty will return any bus/train/ferry leaving next from a given stop.
+
 **Code:**
 ```python
 journey = tnsw.get_departures('209516', '', '', 'YOUR_API_KEY')
