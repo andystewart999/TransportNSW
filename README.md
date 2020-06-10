@@ -21,7 +21,7 @@ The source API details can be found here: https://opendata.transport.nsw.gov.au/
 **Code:**
 ```python
 from TransportNSW import TransportNSW
-ptnsw1 = TransportNSW.TransportNSW()
+tnsw = TransportNSW()
 journey = tnsw.get_departures('209516', '199', '', 'YOUR_API_KEY')
 print(journey)
 ```
