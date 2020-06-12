@@ -39,6 +39,7 @@ print(journey)
 {'stop_id': '2015133', 'route': 'T9 Northern Line', 'due': 2, 'delay': 0, 'real_time': 'y', 'destination': 'Gordon via Lindfield', 'mode': 'Train', 'occupancy': 'n/a', 'trip_id': '151V.1287.126.16.A.8.61670049', 'latitude': -33.89567184448242, 'longitude': 151.1886749267578}
 ```
 
+* stpo_id: the departure stop ID that was specified
 * route: bus, train, ferry number or line description
 * due: minutes until departure
 * delay: delay in minutes from the scheduled leave time
