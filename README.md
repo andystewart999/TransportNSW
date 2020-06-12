@@ -16,11 +16,16 @@ By default the return is the first journey that fits your criteria.  You can opt
 
 If possible, general occupancy level and the latitude and longitude of the selected journey's vehicle (train, bus, etc) will be returned.
 
-### Sample Code
-The following example will request the next leave event for stop ID *2015133*.
-
 ### API Documentation
 The source API details can be found here: https://opendata.transport.nsw.gov.au/node/601/exploreapi
+
+### Parameters
+```python
+.get_departures(stop_id, route, destination, api_key, minimum_due_time)
+```
+
+### Sample Code
+The following example will request the next leave event for stop ID *2015133*.
 
 **Code:**
 ```python
