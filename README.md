@@ -17,7 +17,7 @@ By default the return is the first journey that fits your criteria.  You can opt
 If possible, general occupancy level and the latitude and longitude of the selected journey's vehicle (train, bus, etc) will be returned.
 
 ### Sample Code
-The following example will request the next leave event for the bus route/line *199* from stop ID *209516*.
+The following example will request the next leave event for stop ID *2015133*.
 
 ### API Documentation
 The source API details can be found here: https://opendata.transport.nsw.gov.au/node/601/exploreapi
@@ -34,11 +34,11 @@ print(journey)
 {'stop_id': '2015133', 'route': 'T9 Northern Line', 'due': 2, 'delay': 0, 'real_time': 'y', 'destination': 'Gordon via Lindfield', 'mode': 'Train', 'occupancy': 'n/a', 'trip_id': '151V.1287.126.16.A.8.61670049', 'latitude': -33.89567184448242, 'longitude': 151.1886749267578}
 ```
 
-* route: bus, train, ferry number
+* route: bus, train, ferry number or line description
 * due: minutes until departure
-* real_time: flag if the journey has real_time information
 * delay: delay in minutes from the scheduled leave time
-* destination: end point of the route
+* real_time: flag if the journey has real_time information
+* destination: end point of the route for that journey
 * mode: The type of journey - train, bus, etc
 * occupancy: The overall occupancy of the vehicle, if available
 * trip_id: The unique trip ID, useful for other API calls such as geolocation
@@ -48,10 +48,10 @@ Leaving the line field empty will return any bus/train/ferry leaving next from a
 
 **Code:**
 ```python
-journey = tnsw.get_departures('209516', '', '', 'YOUR_API_KEY')
+journey = tnsw.get_departures('209516', '', '', 'YOUR_API_KEY', 0)
 ```
 
-Setting a destination will return all lines going there from the stop_id. Example for ferries leaving Balmain Warf towards Circular Quay
+Setting a destination will return the first journey from that stop_id on the specified route.  Example for ferries leaving Balmain Warf towards Circular Quay
 
 **Code:**
 ```python
