@@ -1,21 +1,36 @@
-"""A module to query Transport NSW (Australia) departure times."""
-from datetime import datetime
+"""  A module to query Transport NSW (Australia) departure times.         """
+"""  First created by Dav0815 ( https://pypi.org/user/Dav0815/)           """
+"""  Extended by AndyStewart999 ( https://pypi.org/user/andystewart999/ ) """
+
+from datetime import datetime, timedelta
 from google.transit import gtfs_realtime_pb2
 import requests.exceptions
 import requests
 import logging
+import re
 
-ATTR_STOP_ID = 'stop_id'
-ATTR_ROUTE = 'route'
-ATTR_DUE_IN = 'due'
-ATTR_DELAY = 'delay'
-ATTR_REALTIME = 'real_time'
-ATTR_DESTINATION = 'destination'
-ATTR_MODE = 'mode'
+ATTR_DUE = 'due'
+
+ATTR_ORIGIN_STOP_ID = 'origin_stop_id'
+ATTR_ORIGIN_NAME = 'origin_name'
+ATTR_ORIGIN_DETAIL = 'origin_detail'
+ATTR_DEPARTURE_TIME = 'departure_time'
+
+ATTR_DESTINATION_STOP_ID = 'destination_stop_id'
+ATTR_DESTINATION_NAME = 'destination_name'
+ATTR_DESTINATION_DETAIL = 'destination_detail'
+ATTR_ARRIVAL_TIME = 'arrival_time'
+
+ATTR_TRANSPORT_TYPE = 'transport_type'
+ATTR_TRANSPORT_NAME = 'transport_name'
+ATTR_LINE_NAME = 'line_name'
+ATTR_LINE_NAME_SHORT = 'line_name_short'
+
 ATTR_OCCUPANCY = 'occupancy'
-ATTR_TRIP_ID = 'trip_id'
-ATTR_VEHICLE_LATITUDE = 'latitude'
-ATTR_VEHICLE_LONGITUDE = 'longitude'
+
+ATTR_REAL_TIME_TRIP_ID = 'real_time_trip_id'
+ATTR_LATITUDE = 'latitude'
+ATTR_LONGITUDE = 'longitude'
 
 logger = logging.getLogger(__name__)
 
@@ -24,43 +39,56 @@ class TransportNSW(object):
 
     # The application requires an API key. You can register for
     # free on the service NSW website for it.
+    # You need to register for both the Trip Planner and Realtime Vehicle Position APIs
 
     def __init__(self):
         """Initialize the data object with default values."""
-        self.stop_id = None
-        self.route = None
-        self.destination = None
+        self.origin_id = None
+        self.destination_id = None
         self.api_key = None
-        self.min_due_time = None
+        self.trip_wait_time = None
         self.info = {
-            ATTR_STOP_ID: 'n/a',
-            ATTR_ROUTE: 'n/a',
-            ATTR_DUE_IN: 'n/a',
-            ATTR_DELAY: 'n/a',
-            ATTR_REALTIME: 'n/a',
-            ATTR_DESTINATION: 'n/a',
-            ATTR_MODE: 'n/a',
-            ATTR_OCCUPANCY: 'n/a',
-            ATTR_TRIP_ID: 'n/a',
-            ATTR_VEHICLE_LATITUDE: 'n/a',
-            ATTR_VEHICLE_LONGITUDE: 'n/a'
+            ATTR_DUE : 'n/a',
+            ATTR_ORIGIN_STOP_ID : 'n/a',
+            ATTR_ORIGIN_NAME : 'n/a',
+            ATTR_ORIGIN_DETAIL : 'n/a',
+            ATTR_DEPARTURE_TIME : 'n/a',
+            ATTR_DESTINATION_STOP_ID : 'n/a',
+            ATTR_DESTINATION_NAME : 'n/a',
+            ATTR_DESTINATION_DETAIL : 'n/a',
+            ATTR_ARRIVAL_TIME : 'n/a',
+            ATTR_TRANSPORT_TYPE : 'n/a',
+            ATTR_TRANSPORT_NAME : 'n/a',
+            ATTR_LINE_NAME : 'n/a',
+            ATTR_LINE_NAME_SHORT : 'n/a',
+            ATTR_OCCUPANCY : 'n/a',
+            ATTR_REAL_TIME_TRIP_ID : 'n/a',
+            ATTR_LATITUDE : 'n/a',
+            ATTR_LONGITUDE : 'n/a'
             }
 
-    def get_departures(self, stop_id, route , destination , api_key, min_due_time = 0):
+    def get_trip(self, name_origin, name_destination , api_key, trip_wait_time = 0):
         """Get the latest data from Transport NSW."""
-        self.stop_id = stop_id
-        self.route = route
-        self.destination = destination
+        fmt = '%Y-%m-%dT%H:%M:%SZ'
+
+        self.name_origin = name_origin
+        self.destination = name_destination
         self.api_key = api_key
-        self.min_due_time = min_due_time
+        self.trip_wait_time = trip_wait_time
+
+        # This query always uses the current data and time - but add in any 'trip_wait_time' minutes
+        now_plus_wait = datetime.now() + timedelta(minutes = trip_wait_time)
+        itdDate = now_plus_wait.strftime('%Y%m%d')
+        itdTime = now_plus_wait.strftime('%H%M')
 
         # Build the URL including the STOP_ID and the API key
         url = \
-            'https://api.transport.nsw.gov.au/v1/tp/departure_mon?' \
-            'outputFormat=rapidJSON&coordOutputFormat=EPSG%3A4326&' \
-            'mode=direct&type_dm=stop&name_dm=' \
-            + self.stop_id \
-            + '&departureMonitorMacro=true&TfNSWDM=true&version=10.2.1.42'
+            'https://api.transport.nsw.gov.au/v1/tp/trip?' \
+            'outputFormat=rapidJSON&coordOutputFormat=EPSG%3A4326' \
+            '&depArrMacro=dep&itdDate=' + itdDate + '&itdTime=' + itdTime + \
+            '&type_origin=any&name_origin=' + name_origin + \
+            '&type_destination=any&name_destination=' + name_destination + \
+            '&calcNumerOfTrips=1&TfNSWDM=true&version=10.2.1.42'
         auth = 'apikey ' + self.api_key
         header = {'Accept': 'application/json', 'Authorization': auth}
 
@@ -81,175 +109,111 @@ class TransportNSW(object):
         # Parse the result as a JSON object
         result = response.json()
 
-        # If there are no stop events for the query
-        # log an error and return empty object
-        try:
-            result['stopEvents']
-        except KeyError:
-            logger.warning("No stop events for this query")
-            return self.info
+        # The API will always return a valid trip, so it's just a case of grabbing what we need...
+        origin = result['journeys'][0]['legs'][0]['origin']
+        destination = result['journeys'][0]['legs'][0]['destination']
+        transportation = result['journeys'][0]['legs'][0]['transportation']
 
-        # Set variables
-        maxresults = 1
-        monitor = []
-        if self.destination != '':
-            for i in range(len(result['stopEvents'])):
-                destination = result['stopEvents'][i]['transportation']['destination']['name']
-                if destination == self.destination:
-                    event = self.parseEvent(result, i)
-                    if event != None:
-                        monitor.append(event)
-                    if len(monitor) >= maxresults:
-                        # We found enough results, lets stop
-                        break
-        elif self.route != '':
-            # Find the next stop events for a specific route
-            for i in range(len(result['stopEvents'])):
-                number = result['stopEvents'][i]['transportation']['number']
-                if number == self.route:
-                    event = self.parseEvent(result, i)
-                    if event != None:
-                        monitor.append(event)
-                    if len(monitor) >= maxresults:
-                        # We found enough results, lets stop
-                        break
-        else:
-            # No route defined, find any route leaving next
-            for i in range(0, maxresults):
-                event = self.parseEvent(result, i)
-                if event != None:
-                    monitor.append(event)
+        # Origin info
+        origin_stop_id = origin['id']
+        origin_name_temp = origin['name']
+        origin_name = origin_name_temp.split(', ')[1]
+        origin_detail = origin_name_temp.split(', ')[2]
+        origin_departure_time = origin['departureTimeEstimated']
 
-        # If the monitor object is defined, updated the return object with core infos
-        if monitor:
-            self.info = {
-                ATTR_STOP_ID: self.stop_id,
-                ATTR_ROUTE: monitor[0][0],
-                ATTR_DUE_IN: monitor[0][1],
-                ATTR_DELAY: monitor[0][2],
-                ATTR_REALTIME: monitor[0][5],
-                ATTR_DESTINATION: monitor[0][6],
-                ATTR_MODE: monitor[0][7],
-                ATTR_OCCUPANCY: monitor[0][8],
-                ATTR_TRIP_ID: monitor[0][9],
-                ATTR_VEHICLE_LATITUDE: monitor[0][10],
-                ATTR_VEHICLE_LONGITUDE: monitor[0][11]
-                }
-        return self.info
+	# How long until it leaves?
+        due = self.get_due(datetime.strptime(origin_departure_time, fmt))
 
-    def parseEvent(self, result, i):
-        """Parse the current event and extract data."""
-        fmt = '%Y-%m-%dT%H:%M:%SZ'
-        due = 0
-        delay = 0
-        real_time = 'n'
-        occupancy = 'n/a'
+        # Destination info
+        destination_stop_id = destination['id']
+        destination_name_temp = destination['name']
+        destination_name = destination_name_temp.split(', ')[1]
+        destination_detail = destination_name_temp.split(', ')[2]
+        destination_arrival_time = destination['arrivalTimeEstimated']
 
-        number = result['stopEvents'][i]['transportation']['number']
-        planned = datetime.strptime(result['stopEvents'][i]
-            ['departureTimePlanned'], fmt)
-        destination = result['stopEvents'][i]['transportation']['destination']['name']
-        mode = self.get_mode(result['stopEvents'][i]['transportation']['product']['class'])
+        # Trip type info - train, bus, etc
+        mode_temp = transportation['product']['class']
+        mode = self.get_mode(mode_temp)
+        mode_name = transportation['product']['name']
 
-        # See if we can capture the occupancy data
-        if 'properties' in result['stopEvents'][i]['location']:
-            if 'occupancy' in result['stopEvents'][i]['location']['properties']:
-                occupancy = result['stopEvents'][i]['location']['properties']['occupancy']
+        # RealTimeTripID info so we can try and get the current location
+        realtimetripid = transportation['properties']['RealtimeTripId']
 
-        # See if we can capture the unique trip ID - not sure if this is ever not there though
-        if 'properties' in result['stopEvents'][i]:
-            if 'RealtimeTripId' in result['stopEvents'][i]['properties']:
-                trip_id = result['stopEvents'][i]['properties']['RealtimeTripId']
+        # Line info
+        line_name_short = transportation['disassembledName']
+        line_name = transportation['number']
 
-        # Unless realtime data is available the planned is equal to estimated time
-        estimated = planned
-        if 'isRealtimeControlled' in result['stopEvents'][i]:
-            real_time = 'y'
-            estimated = datetime.strptime(result['stopEvents'][i]
-                ['departureTimeEstimated'], fmt)
-        # Only deal with future leave times
-        if estimated > datetime.utcnow():
-            due = self.get_due(estimated)
-            if due > self.min_due_time:
-                delay = self.get_delay(planned, estimated)
+        # Occupancy info, if it's there
+        occupancy = 'UNKNOWN'
+        if 'properties' in destination:
+            if 'occupancy' in destination['properties']:
+                occupancy = destination['properties']['occupancy']
 
-                # Now might be a good time to see if we can also find the latitude and longitude
-                # Harcode for trains right now, but going forwards we need to use the mode to call the right API
+        # Now might be a good time to see if we can also find the latitude and longitude
+        # Using the Realtime Vehicle Positions API
 
-                if mode == "Train":
-                    mode_url = '/sydneytrains'
-                elif mode == "Bus":
-                    mode_url = '/buses'
+        url = \
+            'https://api.transport.nsw.gov.au/v1/gtfs/vehiclepos' \
+             + self.get_url(mode)
+        auth = 'apikey ' + self.api_key
+        header = {'Authorization': auth}
 
-                latitude = 'n/a'
-                longitude = 'n/a'
+        response = requests.get(url, headers=header, timeout=10)
 
-                url = \
-                    'https://api.transport.nsw.gov.au/v1/gtfs/vehiclepos' \
-                    + mode_url
-                auth = 'apikey ' + self.api_key
-                header = {'Authorization': auth}
+        # Only try and process the results if we got a good return code
+        if response.status_code == 200:
+            # Search the feed and see if we can find the trip_id
+            # If we do, capture the latitude and longitude
 
-                # Send the query and return error if something goes wrong
-                # Otherwise store the response
-                try:
-                    response = requests.get(url, headers=header, timeout=10)
-                except:
-                    logger.warning("Network or Timeout error")
-                    return self.info
+            feed = gtfs_realtime_pb2.FeedMessage()
+            feed.ParseFromString(response.content)
 
-                # If there is no valid request (e.g. http code 200)
-                # log error and return empty object
-                if response.status_code != 200:
-                    logger.warning("Error with the request sent; check api key")
-                    return self.info
+            # Unfortunately we need to do some mucking about for train-based trip_ids
+            # Define the appropriate regular expression to search for - usually just the full text
+            bFindLocation = True
+            latitude = 'n/a'
+            longitude = 'n/a'
 
-                # Search the feed and see if we can find the trip_id
-                # If we do, capture the latitude and longitude
+            if mode == 'Train':
+                triparray = realtimetripid.split('.')
+                if len(triparray) == 7:
+                    trip_id_wild = triparray[0] + '.' + triparray[1] + '.' + triparray[2] + '.+.' + triparray[4] + '.' + triparray[5] + '.' + triparray[6]
+                else:
+                    # Hmm, it's not the right length - give up
+                    bFindLocation = False
+            else:
+                trip_id_wild = realtimetripid
 
-                feed = gtfs_realtime_pb2.FeedMessage()
-                feed.ParseFromString(response.content)
+            reg = re.compile(trip_id_wild)
 
+            if bFindLocation:
                 for entity in feed.entity:
-                    if entity.vehicle.trip.trip_id == trip_id:
+                    if bool(re.match(reg, entity.vehicle.trip.trip_id)):
                         latitude = entity.vehicle.position.latitude
                         longitude = entity.vehicle.position.longitude
                         # We found it, so break out
                         break
 
-                return[
-                    number,
-                    due,
-                    delay,
-                    planned,
-                    estimated,
-                    real_time,
-                    destination,
-                    mode,
-                    occupancy,
-                    trip_id,
-                    latitude,
-                    longitude
-                    ]
-            else:
-                return None
-        else:
-            return None
-
-    def get_due(self, estimated):
-        """Min till next leave event."""
-        due = 0
-        due = round((estimated - datetime.utcnow()).seconds / 60)
-        return due
-
-    def get_delay(self, planned, estimated):
-        """Min of delay on planned departure."""
-        delay = 0                   # default is no delay
-        if estimated >= planned:    # there is a delay
-            delay = round((estimated - planned).seconds / 60)
-        else:                       # leaving earlier
-            delay = round((planned - estimated).seconds / 60) * -1
-        return delay
+        self.info = {
+            ATTR_DUE: due,
+            ATTR_ORIGIN_STOP_ID : origin_stop_id,
+            ATTR_ORIGIN_NAME : origin_name,
+            ATTR_ORIGIN_DETAIL : origin_detail,
+            ATTR_DEPARTURE_TIME : origin_departure_time,
+            ATTR_DESTINATION_STOP_ID : destination_stop_id,
+            ATTR_DESTINATION_NAME : destination_name,
+            ATTR_DESTINATION_DETAIL : destination_detail,
+            ATTR_ARRIVAL_TIME : destination_arrival_time,
+            ATTR_TRANSPORT_TYPE : mode,
+            ATTR_TRANSPORT_NAME: mode_name,
+            ATTR_LINE_NAME : line_name,
+            ATTR_LINE_NAME_SHORT : line_name_short,
+            ATTR_OCCUPANCY : occupancy,
+            ATTR_REAL_TIME_TRIP_ID : realtimetripid,
+            ATTR_LATITUDE : latitude,
+            ATTR_LONGITUDE : longitude
+            }
+        return self.info
 
     def get_mode(self, iconId):
         """Map the iconId to proper modes string."""
@@ -262,3 +226,25 @@ class TransportNSW(object):
             11: "Schoolbus"
         }
         return modes.get(iconId, None)
+
+    def get_url(self, mode):
+        """Map the journey mode to the proper real time location URL """
+        url_options = {
+            "Train"     : "/sydneytrains",
+            "Lightrail" : "/lightrail/innerwest",
+            "Bus"       : "/buses",
+            "Coach"     : "/buses",
+            "Ferry"     : "/ferries/sydneyferries",
+            "Schoolbus" : "/buses"
+        }
+        return url_options.get(mode, None)
+
+    def get_due(self, estimated):
+        """Min until departure"""
+        due = 0
+        due = round((estimated - datetime.utcnow()).seconds / 60)
+        return due
+
+    def utc_to_local(self, utc_dt):
+        """ Convert UTC time to local time """
+        return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)
