@@ -48,5 +48,5 @@ print(journey)
 * latitude & longitude: The location of the vehicle, if available
 
 ### To do: ###
-* Add an option to filter by specific trip type, useful if the general departure and arrival ids are being used
+* Add an option to filter by specific transport type, useful if the general departure and arrival ids are being used
 * Add an option to show brief vs verbose information
