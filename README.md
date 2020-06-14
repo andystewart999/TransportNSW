@@ -7,7 +7,7 @@ Python lib to access Transport NSW information.
 An OpenData account and API key is required to request the data. More information on how to create the free account can be found here:
 https://opendata.transport.nsw.gov.au/user-guide.  You need to register an application that needs both the Trip Planner and Realtime Vehicle Positions APIs
 
-### Get the stop and line
+### Get the stop IDs
 The library needs the stop ID for the source and destination, and optionally how many minutes from now the departure should be.  The easiest way to get the stop ID is via https://transportnsw.info/stops#/. It provides the option to search for either a location or a specific platform, bus stop or ferry wharf.  Regardless of if you specify a general location for the origin or destination, the return information shows the stop_id for the actual arrival and destination platform, bus stop or ferry wharf.
 
 If it's available, the general occupancy level and the latitude and longitude of the selected journey's vehicle (train, bus, etc) will be returned.
