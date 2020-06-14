@@ -5,14 +5,12 @@ Python lib to access Transport NSW information.
 
 ### Get an API Key
 An OpenData account and API key is required to request the data. More information on how to create the free account can be found here:
-https://opendata.transport.nsw.gov.au/user-guide .
+https://opendata.transport.nsw.gov.au/user-guide.  You need to register an application that needs both the Trip Planner and Realtime Vehicle Positions APIs
 
 ### Get the stop and line
-The libary will expect at least the stop_id to request the next leave events. The easiest way to get the ID is using Google Maps and clicking on one of the bus, train or ferry stops. The information pane on the left will show the relevant stop ID.
+The library needs the stop ID for the source and destination, and optionally how many minutes from now the departure should be. The easiest way to get the stop ID is using Google Maps and clicking on one of the bus, train or ferry stops. The information pane on the left will show the relevant stop ID.
 
-Another source for the stop ID and line is  https://transportnsw.info/stops#/. It provides the option to search for a stop and the corresponding lines leaving from there. 
-
-By default the return is the first journey that fits your criteria.  You can optionally specific a minimum 'due time' (in minutes) to see journeys further in the future, for example to give you time to get to the station.
+Another source for the stop ID is https://transportnsw.info/stops#/. It provides the option to search for either a location or a specific platform, bus stop or ferry wharf.  Regardless of if you specify a general location for the origin or destination, the return information shows the stop_id for the actual arrival and destination platform, bus stop or ferry wharf.
 
 If possible, general occupancy level and the latitude and longitude of the selected journey's vehicle (train, bus, etc) will be returned.
 
@@ -21,51 +19,36 @@ The source API details can be found here: https://opendata.transport.nsw.gov.au/
 
 ### Parameters
 ```python
-.get_departures(stop_id, route, destination, api_key, minimum_due_time)
+.get_departures(origin_stop_id, destination_stop_id, api_key, [trip_wait_time = 0])
 ```
 
 ### Sample Code
-The following example will request the next leave event for stop ID *2015133*.
+The following example will return the next trip from Gordon Station to Pymble Station.
 
 **Code:**
 ```python
 from TransportNSW import TransportNSW
 tnsw = TransportNSW()
-journey = tnsw.get_departures('2015133', '', '', 'YOUR_API_KEY', 0)
+journey = tnsw.get_trip('10101121', '10101123', 'YOUR_API_KEY')
 print(journey)
 ```
 **Result:**
 ```python
-{'stop_id': '2015133', 'route': 'T9 Northern Line', 'due': 2, 'delay': 0, 'real_time': 'y', 'destination': 'Gordon via Lindfield', 'mode': 'Train', 'occupancy': 'n/a', 'trip_id': '151V.1287.126.16.A.8.61670049', 'latitude': -33.89567184448242, 'longitude': 151.1886749267578}
+{'due': 5, 'origin_stop_id': '207263', 'origin_name': 'Gordon Station', 'origin_detail': 'Platform 3', 'departure_time': '2020-06-14T10:21:30Z', 'destination_stop_id': '2073162', 'destination_name': 'Pymble Station', 'destination_detail': 'Platform 2', 'arrival_time': '2020-06-14T10:23:30Z', 'transport_type': 'Train', 'transport_name': 'Sydney Trains Network', 'line_name': 'T1 North Shore & Western Line', 'line_name_short': 'T1', 'occupancy': 'UNKNOWN', 'real_time_trip_id': '104P.1379.110.128.T.8.61720413', 'latitude': -33.76505661010742, 'longitude': 151.1614227294922}
 ```
 
-* stpo_id: the departure stop ID that was specified
-* route: bus, train, ferry number or line description
-* due: minutes until departure
-* delay: delay in minutes from the scheduled leave time
-* real_time: flag if the journey has real_time information
-* destination: end point of the route for that journey
-* mode: The type of journey - train, bus, etc
-* occupancy: The overall occupancy of the vehicle, if available
-* trip_id: The unique trip ID, useful for other API calls such as geolocation
+* due: the time (in minutes) before the vehicle arrives 
+* origin_stop_id: the specific departure stop id
+* origin_name: the name of the general departure location
+* origin_detail: the specific departure location
+* arrival_time: the arrival time at the origin
+* transport_type: the type of transport, eg train, bus, ferry etc
+* transport_name: the full name of transport providere
+* line_name & line_name_short: the full and short names of the journey
+* occupancy: how full the vehicle is
+* real_time_trip_id: the unique TransportNSW id for that specific journey
 * latitude & longitude: The location of the vehicle, if available
 
-Leaving the line field empty will return any bus/train/ferry leaving next from a given stop.
-
-**Code:**
-```python
-journey = tnsw.get_departures('209516', '', '', 'YOUR_API_KEY', 0)
-```
-
-Setting a destination will return the first journey from that stop_id on the specified route.  Example for ferries leaving Balmain Warf towards Circular Quay
-
-**Code:**
-```python
-journey = tnsw.get_departures('10102008','','Circular Quay' 'YOUR_API_KEY')
-```
-
-### Errors
-No leave event with wrong stop ID or not matching route.
-```
-{'stop_id': 'n/a', 'route': 'n/a', 'due': 'n/a', 'delay': 'n/a', 'real_time': 'n/a', destination: 'n/a'}
-```
+### To do: ###
+* Add an option to filter by specific trip type, useful if the general departure and arrival ids are being used
+* Add an option to show brief vs verbose information
