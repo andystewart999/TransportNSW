@@ -8,22 +8,20 @@ An OpenData account and API key is required to request the data. More informatio
 https://opendata.transport.nsw.gov.au/user-guide.  You need to register an application that needs both the Trip Planner and Realtime Vehicle Positions APIs
 
 ### Get the stop and line
-The library needs the stop ID for the source and destination, and optionally how many minutes from now the departure should be. The easiest way to get the stop ID is using Google Maps and clicking on one of the bus, train or ferry stops. The information pane on the left will show the relevant stop ID.
+The library needs the stop ID for the source and destination, and optionally how many minutes from now the departure should be.  The easiest way to get the stop ID is via https://transportnsw.info/stops#/. It provides the option to search for either a location or a specific platform, bus stop or ferry wharf.  Regardless of if you specify a general location for the origin or destination, the return information shows the stop_id for the actual arrival and destination platform, bus stop or ferry wharf.
 
-Another source for the stop ID is https://transportnsw.info/stops#/. It provides the option to search for either a location or a specific platform, bus stop or ferry wharf.  Regardless of if you specify a general location for the origin or destination, the return information shows the stop_id for the actual arrival and destination platform, bus stop or ferry wharf.
-
-If possible, general occupancy level and the latitude and longitude of the selected journey's vehicle (train, bus, etc) will be returned.
+If it's available, the general occupancy level and the latitude and longitude of the selected journey's vehicle (train, bus, etc) will be returned.
 
 ### API Documentation
 The source API details can be found here: https://opendata.transport.nsw.gov.au/node/601/exploreapi
 
 ### Parameters
 ```python
-.get_departures(origin_stop_id, destination_stop_id, api_key, [trip_wait_time = 0])
+.get_trip(origin_stop_id, destination_stop_id, api_key, [trip_wait_time = 0])
 ```
 
 ### Sample Code
-The following example will return the next trip from Gordon Station to Pymble Station.
+The following example will return the next trip from Gordon Station to Pymble Station, without specifying a platform.
 
 **Code:**
 ```python
