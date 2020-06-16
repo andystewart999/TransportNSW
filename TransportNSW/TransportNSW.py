@@ -76,12 +76,12 @@ class TransportNSW(object):
         self.api_key = api_key
         self.trip_wait_time = trip_wait_time
 
-        # This query always uses the current data and time - but add in any 'trip_wait_time' minutes
+        # This query always uses the current date and time - but add in any 'trip_wait_time' minutes
         now_plus_wait = datetime.now() + timedelta(minutes = trip_wait_time)
         itdDate = now_plus_wait.strftime('%Y%m%d')
         itdTime = now_plus_wait.strftime('%H%M')
 
-        # Build the URL including the STOP_ID and the API key
+        # Build the URL
         url = \
             'https://api.transport.nsw.gov.au/v1/tp/trip?' \
             'outputFormat=rapidJSON&coordOutputFormat=EPSG%3A4326' \
@@ -92,7 +92,7 @@ class TransportNSW(object):
         auth = 'apikey ' + self.api_key
         header = {'Accept': 'application/json', 'Authorization': auth}
 
-        # Send the query and return error if something goes wrong
+        # Send the query and return an error if something goes wrong
         # Otherwise store the response
         try:
             response = requests.get(url, headers=header, timeout=10)
@@ -100,7 +100,7 @@ class TransportNSW(object):
             logger.warning("Network or Timeout error")
             return self.info
 
-        # If there is no valid request (e.g. http code 200)
+        # If there is no valid request (e.g. http code isn't 200)
         # log error and return empty object
         if response.status_code != 200:
             logger.warning("Error with the request sent; check api key")
@@ -151,7 +151,10 @@ class TransportNSW(object):
 
         # Now might be a good time to see if we can also find the latitude and longitude
         # Using the Realtime Vehicle Positions API
+        latitude = 'n/a'
+	longitued = 'n/a'
 
+        # Build the URL
         url = \
             'https://api.transport.nsw.gov.au/v1/gtfs/vehiclepos' \
              + self.get_url(mode)
@@ -171,22 +174,20 @@ class TransportNSW(object):
             # Unfortunately we need to do some mucking about for train-based trip_ids
             # Define the appropriate regular expression to search for - usually just the full text
             bFindLocation = True
-            latitude = 'n/a'
-            longitude = 'n/a'
 
             if mode == 'Train':
                 triparray = realtimetripid.split('.')
                 if len(triparray) == 7:
                     trip_id_wild = triparray[0] + '.' + triparray[1] + '.' + triparray[2] + '.+.' + triparray[4] + '.' + triparray[5] + '.' + triparray[6]
                 else:
-                    # Hmm, it's not the right length - give up
+                    # Hmm, it's not the right length (this happens rarely) - give up
                     bFindLocation = False
             else:
                 trip_id_wild = realtimetripid
 
-            reg = re.compile(trip_id_wild)
-
             if bFindLocation:
+                reg = re.compile(trip_id_wild)
+
                 for entity in feed.entity:
                     if bool(re.match(reg, entity.vehicle.trip.trip_id)):
                         latitude = entity.vehicle.position.latitude
@@ -216,7 +217,7 @@ class TransportNSW(object):
         return self.info
 
     def get_mode(self, iconId):
-        """Map the iconId to proper modes string."""
+        """Map the iconId to a full text string"""
         modes = {
             1: "Train",
             4: "Lightrail",
@@ -229,6 +230,7 @@ class TransportNSW(object):
 
     def get_url(self, mode):
         """Map the journey mode to the proper real time location URL """
+	
         url_options = {
             "Train"     : "/sydneytrains",
             "Lightrail" : "/lightrail/innerwest",
