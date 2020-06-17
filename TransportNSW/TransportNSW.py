@@ -144,7 +144,7 @@ class TransportNSW(object):
         # Now might be a good time to see if we can also find the latitude and longitude
         # Using the Realtime Vehicle Positions API
         latitude = 'n/a'
-	longitued = 'n/a'
+        longitude = 'n/a'
 
         # Build the URL
         url = \
