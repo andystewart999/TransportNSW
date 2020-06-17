@@ -47,6 +47,11 @@ print(journey)
 * real_time_trip_id: the unique TransportNSW id for that specific journey
 * latitude & longitude: The location of the vehicle, if available
 
-### To do: ###
+### To do: 
 * Add an option to filter by specific transport type, useful if the general departure and arrival ids are being used
 * Add an option to show brief vs verbose information
+
+## Thank you
+Thank you Dav0815 for your TransportNSW library that the vast majority of this fork is based on.  I couldn't have done it without you!
+
+https://github.com/Dav0815/TransportNSW
