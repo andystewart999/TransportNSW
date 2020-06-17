@@ -9,7 +9,7 @@ import requests
 import logging
 import re
 
-ATTR_DUE = 'due'
+ATTR_DUE_IN = 'due'
 
 ATTR_ORIGIN_STOP_ID = 'origin_stop_id'
 ATTR_ORIGIN_NAME = 'origin_name'
@@ -48,7 +48,7 @@ class TransportNSW(object):
         self.api_key = None
         self.trip_wait_time = None
         self.info = {
-            ATTR_DUE : 'n/a',
+            ATTR_DUE_IN : 'n/a',
             ATTR_ORIGIN_STOP_ID : 'n/a',
             ATTR_ORIGIN_NAME : 'n/a',
             ATTR_ORIGIN_DETAIL : 'n/a',
@@ -195,7 +195,7 @@ class TransportNSW(object):
                         break
 
         self.info = {
-            ATTR_DUE: due,
+            ATTR_DUE_IN: due,
             ATTR_ORIGIN_STOP_ID : origin_stop_id,
             ATTR_ORIGIN_NAME : origin_name,
             ATTR_ORIGIN_DETAIL : origin_detail,
