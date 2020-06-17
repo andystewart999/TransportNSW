@@ -13,12 +13,10 @@ ATTR_DUE_IN = 'due'
 
 ATTR_ORIGIN_STOP_ID = 'origin_stop_id'
 ATTR_ORIGIN_NAME = 'origin_name'
-ATTR_ORIGIN_DETAIL = 'origin_detail'
 ATTR_DEPARTURE_TIME = 'departure_time'
 
 ATTR_DESTINATION_STOP_ID = 'destination_stop_id'
 ATTR_DESTINATION_NAME = 'destination_name'
-ATTR_DESTINATION_DETAIL = 'destination_detail'
 ATTR_ARRIVAL_TIME = 'arrival_time'
 
 ATTR_TRANSPORT_TYPE = 'transport_type'
@@ -51,11 +49,9 @@ class TransportNSW(object):
             ATTR_DUE_IN : 'n/a',
             ATTR_ORIGIN_STOP_ID : 'n/a',
             ATTR_ORIGIN_NAME : 'n/a',
-            ATTR_ORIGIN_DETAIL : 'n/a',
             ATTR_DEPARTURE_TIME : 'n/a',
             ATTR_DESTINATION_STOP_ID : 'n/a',
             ATTR_DESTINATION_NAME : 'n/a',
-            ATTR_DESTINATION_DETAIL : 'n/a',
             ATTR_ARRIVAL_TIME : 'n/a',
             ATTR_TRANSPORT_TYPE : 'n/a',
             ATTR_TRANSPORT_NAME : 'n/a',
@@ -116,9 +112,7 @@ class TransportNSW(object):
 
         # Origin info
         origin_stop_id = origin['id']
-        origin_name_temp = origin['name']
-        origin_name = origin_name_temp.split(', ')[1]
-        origin_detail = origin_name_temp.split(', ')[2]
+        origin_name = origin['name']
         origin_departure_time = origin['departureTimeEstimated']
 
 	# How long until it leaves?
@@ -126,9 +120,7 @@ class TransportNSW(object):
 
         # Destination info
         destination_stop_id = destination['id']
-        destination_name_temp = destination['name']
-        destination_name = destination_name_temp.split(', ')[1]
-        destination_detail = destination_name_temp.split(', ')[2]
+        destination_name = destination['name']
         destination_arrival_time = destination['arrivalTimeEstimated']
 
         # Trip type info - train, bus, etc
@@ -198,11 +190,9 @@ class TransportNSW(object):
             ATTR_DUE_IN: due,
             ATTR_ORIGIN_STOP_ID : origin_stop_id,
             ATTR_ORIGIN_NAME : origin_name,
-            ATTR_ORIGIN_DETAIL : origin_detail,
             ATTR_DEPARTURE_TIME : origin_departure_time,
             ATTR_DESTINATION_STOP_ID : destination_stop_id,
             ATTR_DESTINATION_NAME : destination_name,
-            ATTR_DESTINATION_DETAIL : destination_detail,
             ATTR_ARRIVAL_TIME : destination_arrival_time,
             ATTR_TRANSPORT_TYPE : mode,
             ATTR_TRANSPORT_NAME: mode_name,
