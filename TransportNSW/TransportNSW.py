@@ -247,7 +247,8 @@ class TransportNSW(object):
     def get_due(self, estimated):
         """Min until departure"""
         due = 0
-        due = round((estimated - datetime.utcnow()).seconds / 60)
+        if estimated > datetime.utcnow():
+            due = round((estimated - datetime.utcnow()).seconds / 60)
         return due
 
 
