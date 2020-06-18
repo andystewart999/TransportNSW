@@ -107,8 +107,6 @@ class TransportNSW(object):
         # Parse the result as a JSON object
         result = response.json()
 
-        print (result)
-
         # The API will always return a valid trip, so it's just a case of grabbing what we need...
         # We're only reporting on the origin and destination, it's out of scope to discuss the specifics of the ENTIRE journey
         # This isn't a route planner, just a 'how long until the next journey I've specified' tool
