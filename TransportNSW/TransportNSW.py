@@ -19,10 +19,11 @@ ATTR_DESTINATION_STOP_ID = 'destination_stop_id'
 ATTR_DESTINATION_NAME = 'destination_name'
 ATTR_ARRIVAL_TIME = 'arrival_time'
 
-ATTR_TRANSPORT_TYPE = 'transport_type'
-ATTR_TRANSPORT_NAME = 'transport_name'
-ATTR_LINE_NAME = 'line_name'
-ATTR_LINE_NAME_SHORT = 'line_name_short'
+ATTR_ORIGIN_TRANSPORT_TYPE = 'origin_transport_type'
+ATTR_ORIGIN_TRANSPORT_NAME = 'origin_transport_name'
+ATTR_ORIGIN_LINE_NAME = 'origin_line_name'
+ATTR_ORIGIN_LINE_NAME_SHORT = 'origin_line_name_short'
+ATTR_CHANGES = 'changes'
 
 ATTR_OCCUPANCY = 'occupancy'
 
@@ -53,10 +54,11 @@ class TransportNSW(object):
             ATTR_DESTINATION_STOP_ID : 'n/a',
             ATTR_DESTINATION_NAME : 'n/a',
             ATTR_ARRIVAL_TIME : 'n/a',
-            ATTR_TRANSPORT_TYPE : 'n/a',
-            ATTR_TRANSPORT_NAME : 'n/a',
-            ATTR_LINE_NAME : 'n/a',
-            ATTR_LINE_NAME_SHORT : 'n/a',
+            ATTR_ORIGIN_TRANSPORT_TYPE : 'n/a',
+            ATTR_ORIGIN_TRANSPORT_NAME : 'n/a',
+            ATTR_ORIGIN_LINE_NAME : 'n/a',
+            ATTR_ORIGIN_LINE_NAME_SHORT : 'n/a',
+            ATTR_CHANGES : 'n/a',
             ATTR_OCCUPANCY : 'n/a',
             ATTR_REAL_TIME_TRIP_ID : 'n/a',
             ATTR_LATITUDE : 'n/a',
@@ -77,7 +79,7 @@ class TransportNSW(object):
         itdDate = now_plus_wait.strftime('%Y%m%d')
         itdTime = now_plus_wait.strftime('%H%M')
 
-        # Build the URL
+        # Build the entire URL
         url = \
             'https://api.transport.nsw.gov.au/v1/tp/trip?' \
             'outputFormat=rapidJSON&coordOutputFormat=EPSG%3A4326' \
@@ -105,10 +107,19 @@ class TransportNSW(object):
         # Parse the result as a JSON object
         result = response.json()
 
+        print (result)
+
         # The API will always return a valid trip, so it's just a case of grabbing what we need...
+        # We're only reporting on the origin and destination, it's out of scope to discuss the specifics of the ENTIRE journey
+        # This isn't a route planner, just a 'how long until the next journey I've specified' tool
+        # The assumption is that the travelee will know HOW to make the defined journey, they're just asking WHEN it's happening next
+
+        legs = len(result['journeys'][0]['legs'])-1
         origin = result['journeys'][0]['legs'][0]['origin']
-        destination = result['journeys'][0]['legs'][0]['destination']
+        first_destination = result['journeys'][0]['legs'][0]['destination']
+        final_destination = result['journeys'][0]['legs'][legs]['destination']
         transportation = result['journeys'][0]['legs'][0]['transportation']
+
 
         # Origin info
         origin_stop_id = origin['id']
@@ -119,27 +130,27 @@ class TransportNSW(object):
         due = self.get_due(datetime.strptime(origin_departure_time, fmt))
 
         # Destination info
-        destination_stop_id = destination['id']
-        destination_name = destination['name']
-        destination_arrival_time = destination['arrivalTimeEstimated']
+        destination_stop_id = final_destination['id']
+        destination_name = final_destination['name']
+        destination_arrival_time = final_destination['arrivalTimeEstimated']
 
-        # Trip type info - train, bus, etc
-        mode_temp = transportation['product']['class']
-        mode = self.get_mode(mode_temp)
-        mode_name = transportation['product']['name']
+        # Origin type info - train, bus, etc
+        origin_mode_temp = transportation['product']['class']
+        origin_mode = self.get_mode(origin_mode_temp)
+        origin_mode_name = transportation['product']['name']
 
         # RealTimeTripID info so we can try and get the current location
         realtimetripid = transportation['properties']['RealtimeTripId']
 
         # Line info
-        line_name_short = transportation['disassembledName']
-        line_name = transportation['number']
+        origin_line_name_short = transportation['disassembledName']
+        origin_line_name = transportation['number']
 
         # Occupancy info, if it's there
         occupancy = 'UNKNOWN'
-        if 'properties' in destination:
-            if 'occupancy' in destination['properties']:
-                occupancy = destination['properties']['occupancy']
+        if 'properties' in first_destination:
+            if 'occupancy' in first_destination['properties']:
+                occupancy = first_destination['properties']['occupancy']
 
         # Now might be a good time to see if we can also find the latitude and longitude
         # Using the Realtime Vehicle Positions API
@@ -149,7 +160,7 @@ class TransportNSW(object):
         # Build the URL
         url = \
             'https://api.transport.nsw.gov.au/v1/gtfs/vehiclepos' \
-             + self.get_url(mode)
+             + self.get_url(origin_mode)
         auth = 'apikey ' + self.api_key
         header = {'Authorization': auth}
 
@@ -167,7 +178,7 @@ class TransportNSW(object):
             # Define the appropriate regular expression to search for - usually just the full text
             bFindLocation = True
 
-            if mode == 'Train':
+            if origin_mode == 'Train':
                 triparray = realtimetripid.split('.')
                 if len(triparray) == 7:
                     trip_id_wild = triparray[0] + '.' + triparray[1] + '.' + triparray[2] + '.+.' + triparray[4] + '.' + triparray[5] + '.' + triparray[6]
@@ -195,10 +206,11 @@ class TransportNSW(object):
             ATTR_DESTINATION_STOP_ID : destination_stop_id,
             ATTR_DESTINATION_NAME : destination_name,
             ATTR_ARRIVAL_TIME : destination_arrival_time,
-            ATTR_TRANSPORT_TYPE : mode,
-            ATTR_TRANSPORT_NAME: mode_name,
-            ATTR_LINE_NAME : line_name,
-            ATTR_LINE_NAME_SHORT : line_name_short,
+            ATTR_ORIGIN_TRANSPORT_TYPE : origin_mode,
+            ATTR_ORIGIN_TRANSPORT_NAME: origin_mode_name,
+            ATTR_ORIGIN_LINE_NAME : origin_line_name,
+            ATTR_ORIGIN_LINE_NAME_SHORT : origin_line_name_short,
+            ATTR_CHANGES: legs,
             ATTR_OCCUPANCY : occupancy,
             ATTR_REAL_TIME_TRIP_ID : realtimetripid,
             ATTR_LATITUDE : latitude,
@@ -206,36 +218,40 @@ class TransportNSW(object):
             }
         return self.info
 
+
     def get_mode(self, iconId):
         """Map the iconId to a full text string"""
         modes = {
             1: "Train",
-            4: "Lightrail",
+            4: "Light rail",
             5: "Bus",
             7: "Coach",
             9: "Ferry",
-            11: "Schoolbus"
+            11: "School bus"
         }
         return modes.get(iconId, None)
 
+
     def get_url(self, mode):
         """Map the journey mode to the proper real time location URL """
-	
+
         url_options = {
-            "Train"     : "/sydneytrains",
-            "Lightrail" : "/lightrail/innerwest",
-            "Bus"       : "/buses",
-            "Coach"     : "/buses",
-            "Ferry"     : "/ferries/sydneyferries",
-            "Schoolbus" : "/buses"
+            "Train"      : "/sydneytrains",
+            "Light rail" : "/lightrail/innerwest",
+            "Bus"        : "/buses",
+            "Coach"      : "/buses",
+            "Ferry"      : "/ferries/sydneyferries",
+            "School bus" : "/buses"
         }
         return url_options.get(mode, None)
+
 
     def get_due(self, estimated):
         """Min until departure"""
         due = 0
         due = round((estimated - datetime.utcnow()).seconds / 60)
         return due
+
 
     def utc_to_local(self, utc_dt):
         """ Convert UTC time to local time """
