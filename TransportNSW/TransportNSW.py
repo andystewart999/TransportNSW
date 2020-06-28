@@ -86,7 +86,7 @@ class TransportNSW(object):
             '&depArrMacro=dep&itdDate=' + itdDate + '&itdTime=' + itdTime + \
             '&type_origin=any&name_origin=' + name_origin + \
             '&type_destination=any&name_destination=' + name_destination + \
-            '&calcNumerOfTrips=1&TfNSWDM=true&version=10.2.1.42'
+            '&calcNumberOfTrips=1&TfNSWDM=true&version=10.2.1.42'
         auth = 'apikey ' + self.api_key
         header = {'Accept': 'application/json', 'Authorization': auth}
 
@@ -106,17 +106,23 @@ class TransportNSW(object):
 
         # Parse the result as a JSON object
         result = response.json()
+        print (result)
 
         # The API will always return a valid trip, so it's just a case of grabbing what we need...
         # We're only reporting on the origin and destination, it's out of scope to discuss the specifics of the ENTIRE journey
         # This isn't a route planner, just a 'how long until the next journey I've specified' tool
         # The assumption is that the travelee will know HOW to make the defined journey, they're just asking WHEN it's happening next
 
-        legs = len(result['journeys'][0]['legs'])-1
-        origin = result['journeys'][0]['legs'][0]['origin']
-        first_destination = result['journeys'][0]['legs'][0]['destination']
-        final_destination = result['journeys'][0]['legs'][legs]['destination']
-        transportation = result['journeys'][0]['legs'][0]['transportation']
+        legs = result['journeys'][0]['legs']
+        first_leg = self.find_first_leg(legs)
+        last_leg = self.find_last_leg(legs)
+        changes = self.find_changes(legs)
+
+        origin = result['journeys'][0]['legs'][first_leg]['origin']
+        # probably tidy this up when we start to get occupancy data back
+        first_destination = result['journeys'][0]['legs'][first_leg]['destination']
+        destination = result['journeys'][0]['legs'][last_leg]['destination']
+        transportation = result['journeys'][0]['legs'][first_leg]['transportation']
 
 
         # Origin info
@@ -128,17 +134,20 @@ class TransportNSW(object):
         due = self.get_due(datetime.strptime(origin_departure_time, fmt))
 
         # Destination info
-        destination_stop_id = final_destination['id']
-        destination_name = final_destination['name']
-        destination_arrival_time = final_destination['arrivalTimeEstimated']
+        destination_stop_id = destination['id']
+        destination_name = destination['name']
+        destination_arrival_time = destination['arrivalTimeEstimated']
 
         # Origin type info - train, bus, etc
         origin_mode_temp = transportation['product']['class']
         origin_mode = self.get_mode(origin_mode_temp)
         origin_mode_name = transportation['product']['name']
 
-        # RealTimeTripID info so we can try and get the current location
-        realtimetripid = transportation['properties']['RealtimeTripId']
+        # RealTimeTripID info so we can try and get the current location later
+        realtimetripid = 'n/a'
+        if 'properties' in transportation:
+            if 'RealtimeTripId' in transportation['properties']:
+                realtimetripid = transportation['properties']['RealtimeTripId']
 
         # Line info
         origin_line_name_short = transportation['disassembledName']
@@ -155,46 +164,47 @@ class TransportNSW(object):
         latitude = 'n/a'
         longitude = 'n/a'
 
-        # Build the URL
-        url = \
-            'https://api.transport.nsw.gov.au/v1/gtfs/vehiclepos' \
-             + self.get_url(origin_mode)
-        auth = 'apikey ' + self.api_key
-        header = {'Authorization': auth}
+        if realtimetripid != 'n/a':
+            # Build the URL
+            url = \
+                'https://api.transport.nsw.gov.au/v1/gtfs/vehiclepos' \
+                 + self.get_url(origin_mode)
+            auth = 'apikey ' + self.api_key
+            header = {'Authorization': auth}
 
-        response = requests.get(url, headers=header, timeout=10)
+            response = requests.get(url, headers=header, timeout=10)
 
-        # Only try and process the results if we got a good return code
-        if response.status_code == 200:
-            # Search the feed and see if we can find the trip_id
-            # If we do, capture the latitude and longitude
+            # Only try and process the results if we got a good return code
+            if response.status_code == 200:
+                # Search the feed and see if we can find the trip_id
+                # If we do, capture the latitude and longitude
 
-            feed = gtfs_realtime_pb2.FeedMessage()
-            feed.ParseFromString(response.content)
+                feed = gtfs_realtime_pb2.FeedMessage()
+                feed.ParseFromString(response.content)
 
-            # Unfortunately we need to do some mucking about for train-based trip_ids
-            # Define the appropriate regular expression to search for - usually just the full text
-            bFindLocation = True
+                # Unfortunately we need to do some mucking about for train-based trip_ids
+                # Define the appropriate regular expression to search for - usually just the full text
+                bFindLocation = True
 
-            if origin_mode == 'Train':
-                triparray = realtimetripid.split('.')
-                if len(triparray) == 7:
-                    trip_id_wild = triparray[0] + '.' + triparray[1] + '.' + triparray[2] + '.+.' + triparray[4] + '.' + triparray[5] + '.' + triparray[6]
+                if origin_mode == 'Train':
+                    triparray = realtimetripid.split('.')
+                    if len(triparray) == 7:
+                        trip_id_wild = triparray[0] + '.' + triparray[1] + '.' + triparray[2] + '.+.' + triparray[4] + '.' + triparray[5] + '.' + triparray[6]
+                    else:
+                        # Hmm, it's not the right length (this happens rarely) - give up
+                        bFindLocation = False
                 else:
-                    # Hmm, it's not the right length (this happens rarely) - give up
-                    bFindLocation = False
-            else:
-                trip_id_wild = realtimetripid
+                    trip_id_wild = realtimetripid
 
-            if bFindLocation:
-                reg = re.compile(trip_id_wild)
+                if bFindLocation:
+                    reg = re.compile(trip_id_wild)
 
-                for entity in feed.entity:
-                    if bool(re.match(reg, entity.vehicle.trip.trip_id)):
-                        latitude = entity.vehicle.position.latitude
-                        longitude = entity.vehicle.position.longitude
-                        # We found it, so break out
-                        break
+                    for entity in feed.entity:
+                        if bool(re.match(reg, entity.vehicle.trip.trip_id)):
+                            latitude = entity.vehicle.position.latitude
+                            longitude = entity.vehicle.position.longitude
+                            # We found it, so break out
+                            break
 
         self.info = {
             ATTR_DUE_IN: due,
@@ -208,13 +218,54 @@ class TransportNSW(object):
             ATTR_ORIGIN_TRANSPORT_NAME: origin_mode_name,
             ATTR_ORIGIN_LINE_NAME : origin_line_name,
             ATTR_ORIGIN_LINE_NAME_SHORT : origin_line_name_short,
-            ATTR_CHANGES: legs,
+            ATTR_CHANGES: changes,
             ATTR_OCCUPANCY : occupancy,
             ATTR_REAL_TIME_TRIP_ID : realtimetripid,
             ATTR_LATITUDE : latitude,
             ATTR_LONGITUDE : longitude
             }
         return self.info
+
+
+    def find_first_leg(self, legs):
+        # Find the first non-footpath leg
+        leg_count = len(legs)
+        for leg in range (0, leg_count, 1):
+            leg_class = legs[leg]['transportation']['product']['class']
+            #print (leg_class)
+            if leg_class < 100:
+                # 100 is the class for walking, anything less is a train, bus, etc
+                return leg
+
+        # Hmm, we didn't find one
+        return None
+
+
+    def find_last_leg(self, legs):
+        # Find the last non-footpath leg
+        leg_count = len(legs)
+        for leg in range (leg_count-1, 0, -1):
+            leg_class = legs[leg]['transportation']['product']['class']
+            #print (leg_class)
+            if leg_class < 100:
+                # 100 is the class for walking, anything less is a train, bus, etc
+                return leg
+
+        # Hmm, we didn't find one
+        return None
+
+    def find_changes(self, legs):
+        # Find out how often we have to change
+        changes = 0
+        leg_count = len(legs)
+
+        for leg in range (0, leg_count, 1):
+            leg_class = legs[leg]['transportation']['product']['class']
+            if leg_class < 100:
+                # 100 is the class for walking, anything less is a train, bus, etc
+                changes = changes + 1
+
+        return changes - 1
 
 
     def get_mode(self, iconId):
@@ -250,8 +301,3 @@ class TransportNSW(object):
         if estimated > datetime.utcnow():
             due = round((estimated - datetime.utcnow()).seconds / 60)
         return due
-
-
-    def utc_to_local(self, utc_dt):
-        """ Convert UTC time to local time """
-        return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)
