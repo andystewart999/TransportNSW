@@ -32,26 +32,24 @@ print(journey)
 ```
 **Result:**
 ```python
-{'due': 5, 'origin_stop_id': '207263', 'origin_name': 'Gordon Station', 'origin_detail': 'Platform 3', 'departure_time': '2020-06-14T10:21:30Z', 'destination_stop_id': '2073162', 'destination_name': 'Pymble Station', 'destination_detail': 'Platform 2', 'arrival_time': '2020-06-14T10:23:30Z', 'transport_type': 'Train', 'transport_name': 'Sydney Trains Network', 'line_name': 'T1 North Shore & Western Line', 'line_name_short': 'T1', 'occupancy': 'UNKNOWN', 'real_time_trip_id': '104P.1379.110.128.T.8.61720413', 'latitude': -33.76505661010742, 'longitude': 151.1614227294922}
+{'due': 23, 'origin_stop_id': '207537', 'origin_name': 'St Ives, Mona Vale Rd at Shinfield Ave', 'departure_time': '2020-06-28T10:10:00Z', 'destination_stop_id': '2000338', 'destination_name': 'Sydney, Central Station, Platform 18', 'arrival_time': '2020-06-28T11:02:00Z', 'origin_transport_type': 'Bus', 'origin_transport_name': 'Sydney Buses Network', 'origin_line_name': '195', 'origin_line_name_short': '195', 'changes': 1, 'occupancy': 'UNKNOWN', 'real_time_trip_id': '612993', 'latitude': 'n/a', 'longitude': 'n/a'}
 ```
 
 * due: the time (in minutes) before the vehicle arrives 
 * origin_stop_id: the specific departure stop id
-* origin_name: the name of the general departure location
-* origin_detail: the specific departure location
+* origin_name: the name of the departure location
+* departure_time: the departure time
+* destination_stop_id: the specific destination stop id
+* destination_name: the name of the destination location
 * arrival_time: the arrival time at the origin
-* transport_type: the type of transport, eg train, bus, ferry etc
-* transport_name: the full name of transport providere
-* line_name & line_name_short: the full and short names of the journey
-* occupancy: how full the vehicle is
+* origin_transport_type: the type of transport, eg train, bus, ferry etc
+* origin_transport_name: the full name of transport providere
+* origin_line_name & origin_line_name_short: the full and short names of the journey
+* changes: how many transport changes are needed
+* occupancy: how full the vehicle is, if available
 * real_time_trip_id: the unique TransportNSW id for that specific journey
 * latitude & longitude: The location of the vehicle, if available
 
-### To do: 
-* Add an option to filter by specific transport type, useful if the general departure and arrival ids are being used
-* Add an option to show brief vs verbose information
-
 ## Thank you
 Thank you Dav0815 for your TransportNSW library that the vast majority of this fork is based on.  I couldn't have done it without you!
-
 https://github.com/Dav0815/TransportNSW
