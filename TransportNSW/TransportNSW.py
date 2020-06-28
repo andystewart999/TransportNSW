@@ -106,7 +106,7 @@ class TransportNSW(object):
 
         # Parse the result as a JSON object
         result = response.json()
-        print (result)
+        #print (result)
 
         # The API will always return a valid trip, so it's just a case of grabbing what we need...
         # We're only reporting on the origin and destination, it's out of scope to discuss the specifics of the ENTIRE journey
@@ -117,6 +117,10 @@ class TransportNSW(object):
         first_leg = self.find_first_leg(legs)
         last_leg = self.find_last_leg(legs)
         changes = self.find_changes(legs)
+
+        print (first_leg)
+        print (last_leg)
+        print (changes)
 
         origin = result['journeys'][0]['legs'][first_leg]['origin']
         # probably tidy this up when we start to get occupancy data back
@@ -244,7 +248,7 @@ class TransportNSW(object):
     def find_last_leg(self, legs):
         # Find the last non-footpath leg
         leg_count = len(legs)
-        for leg in range (leg_count-1, 0, -1):
+        for leg in range (leg_count - 1, -1, -1):
             leg_class = legs[leg]['transportation']['product']['class']
             #print (leg_class)
             if leg_class < 100:
