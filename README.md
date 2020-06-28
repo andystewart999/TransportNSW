@@ -20,6 +20,8 @@ The source API details can be found here: https://opendata.transport.nsw.gov.au/
 .get_trip(origin_stop_id, destination_stop_id, api_key, [trip_wait_time = 0])
 ```
 
+TransportNSW's trip planner works much better if you use the general location IDs (eg Central Station) rather than a specific platform id (eg Central Station, Platform 19).  Forcing a specific platform sometimes results in much more complicated trips.
+
 ### Sample Code
 The following example will return the next trip from Gordon Station to Pymble Station, without specifying a platform.
 
@@ -35,7 +37,7 @@ print(journey)
 {'due': 23, 'origin_stop_id': '207537', 'origin_name': 'St Ives, Mona Vale Rd at Shinfield Ave', 'departure_time': '2020-06-28T10:10:00Z', 'destination_stop_id': '2000338', 'destination_name': 'Sydney, Central Station, Platform 18', 'arrival_time': '2020-06-28T11:02:00Z', 'origin_transport_type': 'Bus', 'origin_transport_name': 'Sydney Buses Network', 'origin_line_name': '195', 'origin_line_name_short': '195', 'changes': 1, 'occupancy': 'UNKNOWN', 'real_time_trip_id': '612993', 'latitude': 'n/a', 'longitude': 'n/a'}
 ```
 
-* due: the time (in minutes) before the vehicle arrives 
+* due: the time (in minutes) before the journey starts 
 * origin_stop_id: the specific departure stop id
 * origin_name: the name of the departure location
 * departure_time: the departure time
@@ -49,6 +51,8 @@ print(journey)
 * occupancy: how full the vehicle is, if available
 * real_time_trip_id: the unique TransportNSW id for that specific journey
 * latitude & longitude: The location of the vehicle, if available
+
+Please note that the origin and destination detail is just that.  We don't return any intermediate steps, transport change types etc other than the total number of changes.  The assumption is that you'll know the details of your specified trip, you just want to know when the next departure is.  If you need much more detailed information then I recommend that you use the full Transport NSW trip planner website or application.
 
 ## Thank you
 Thank you Dav0815 for your TransportNSW library that the vast majority of this fork is based on.  I couldn't have done it without you!
