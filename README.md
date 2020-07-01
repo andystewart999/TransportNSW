@@ -23,13 +23,13 @@ The source API details can be found here: https://opendata.transport.nsw.gov.au/
 TransportNSW's trip planner works much better if you use the general location IDs (eg Central Station) rather than a specific platform id (eg Central Station, Platform 19).  Forcing a specific platform sometimes results in much more complicated trips.
 
 ### Sample Code
-The following example will return the next trip from Gordon Station to Pymble Station, without specifying a platform.
+The following example will return the next trip from a bus stop in St. Ives to Central Station, without specifying a specific destination platform.
 
 **Code:**
 ```python
 from TransportNSW import TransportNSW
 tnsw = TransportNSW()
-journey = tnsw.get_trip('10101121', '10101123', 'YOUR_API_KEY')
+journey = tnsw.get_trip('207537', '10101100', 'YOUR_API_KEY')
 print(journey)
 ```
 **Result:**
