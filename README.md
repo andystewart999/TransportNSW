@@ -13,7 +13,7 @@ The library needs the stop ID for the source and destination, and optionally how
 If it's available, the general occupancy level and the latitude and longitude of the selected journey's vehicle (train, bus, etc) will be returned.
 
 ### API Documentation
-The source API details can be found here: https://opendata.transport.nsw.gov.au/node/601/exploreapi
+The source API details can be found here: https://opendata.transport.nsw.gov.au/sites/default/files/2023-08/Trip%20Planner%20API%20manual-opendataproduction%20v3.2.pdf
 
 ### Parameters
 ```python
