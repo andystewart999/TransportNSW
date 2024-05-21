@@ -8,6 +8,7 @@ import requests.exceptions
 import requests
 import logging
 import re
+import json #For the output
 
 ATTR_DUE_IN = 'due'
 
@@ -46,6 +47,7 @@ class TransportNSW(object):
         self.destination_id = None
         self.api_key = None
         self.trip_wait_time = None
+        self.transport_type = None
         self.info = {
             ATTR_DUE_IN : 'n/a',
             ATTR_ORIGIN_STOP_ID : 'n/a',
@@ -65,7 +67,7 @@ class TransportNSW(object):
             ATTR_LONGITUDE : 'n/a'
             }
 
-    def get_trip(self, name_origin, name_destination , api_key, trip_wait_time = 0):
+    def get_trip(self, name_origin, name_destination , api_key, trip_wait_time = 0, transport_type = 0):
         """Get the latest data from Transport NSW."""
         fmt = '%Y-%m-%dT%H:%M:%SZ'
 
@@ -73,11 +75,19 @@ class TransportNSW(object):
         self.destination = name_destination
         self.api_key = api_key
         self.trip_wait_time = trip_wait_time
+        self.transport_type = transport_type
 
         # This query always uses the current date and time - but add in any 'trip_wait_time' minutes
         now_plus_wait = datetime.now() + timedelta(minutes = trip_wait_time)
         itdDate = now_plus_wait.strftime('%Y%m%d')
         itdTime = now_plus_wait.strftime('%H%M')
+
+        if transport_type == 0:
+            # We only need to retrieve one trip - a transport type filter hasn't been applied
+            numberOfTrips = 1
+        else:
+            # 5 trips seems like a safe number
+            numberOfTrips = 5
 
         # Build the entire URL
         url = \
@@ -86,7 +96,9 @@ class TransportNSW(object):
             '&depArrMacro=dep&itdDate=' + itdDate + '&itdTime=' + itdTime + \
             '&type_origin=any&name_origin=' + name_origin + \
             '&type_destination=any&name_destination=' + name_destination + \
-            '&calcNumberOfTrips=1&TfNSWDM=true&version=10.2.1.42'
+            '&calcNumberOfTrips=' + str(numberOfTrips) + \
+            '&TfNSWTR=true'
+
         auth = 'apikey ' + self.api_key
         header = {'Accept': 'application/json', 'Authorization': auth}
 
@@ -106,25 +118,36 @@ class TransportNSW(object):
 
         # Parse the result as a JSON object
         result = response.json()
-        #print (result)
 
         # The API will always return a valid trip, so it's just a case of grabbing what we need...
         # We're only reporting on the origin and destination, it's out of scope to discuss the specifics of the ENTIRE journey
         # This isn't a route planner, just a 'how long until the next journey I've specified' tool
         # The assumption is that the travelee will know HOW to make the defined journey, they're just asking WHEN it's happening next
+        # All we potentially have to do is find the first trip that matches the transport_type filter
 
-        legs = result['journeys'][0]['legs']
-        first_leg = self.find_first_leg(legs)
-        last_leg = self.find_last_leg(legs)
-        changes = self.find_changes(legs)
+        if transport_type == 0:
+            # Just grab the first (and only) trip
+            journey = result['journeys'][0]
+        else:
+            # Look for a trip with a matching class filter in at least one of its legs.  Could possibly be more stringent here, if ANY part of the journey fits the filter, it will be returned.
+            journey = self.find_first_journey(result['journeys'], transport_type)
 
-        print (first_leg)
-        print (last_leg)
-        print (changes)
+        if journey is None:
+            logger.warning("No journey information returned")
+            return self.info
+
+        if journey['legs'] is None:
+            logger.warning("No journey information returned")
+            return self.info
+
+        legs = journey['legs']
+        first_leg = self.find_first_leg(legs, transport_type)
+        last_leg = self.find_last_leg(legs, transport_type)
+        changes = self.find_changes(legs, transport_type)
 
         origin = result['journeys'][0]['legs'][first_leg]['origin']
         # probably tidy this up when we start to get occupancy data back
-        first_destination = result['journeys'][0]['legs'][first_leg]['destination']
+        first_stop = result['journeys'][0]['legs'][first_leg]['destination']
         destination = result['journeys'][0]['legs'][last_leg]['destination']
         transportation = result['journeys'][0]['legs'][first_leg]['transportation']
 
@@ -134,7 +157,7 @@ class TransportNSW(object):
         origin_name = origin['name']
         origin_departure_time = origin['departureTimeEstimated']
 
-	# How long until it leaves?
+        # How long until it leaves?
         due = self.get_due(datetime.strptime(origin_departure_time, fmt))
 
         # Destination info
@@ -154,14 +177,19 @@ class TransportNSW(object):
                 realtimetripid = transportation['properties']['RealtimeTripId']
 
         # Line info
-        origin_line_name_short = transportation['disassembledName']
-        origin_line_name = transportation['number']
+        origin_line_name_short = "unknown"
+        if 'disassembledName' in transportation:
+            origin_line_name_short = transportation['disassembledName']
+
+        origin_line_name = "unknown"
+        if 'number' in transportation:
+            origin_line_name = transportation['number']
 
         # Occupancy info, if it's there
         occupancy = 'UNKNOWN'
-        if 'properties' in first_destination:
-            if 'occupancy' in first_destination['properties']:
-                occupancy = first_destination['properties']['occupancy']
+        if 'properties' in first_stop:
+            if 'occupancy' in first_stop['properties']:
+                occupancy = first_stop['properties']['occupancy']
 
         # Now might be a good time to see if we can also find the latitude and longitude
         # Using the Realtime Vehicle Positions API
@@ -228,45 +256,53 @@ class TransportNSW(object):
             ATTR_LATITUDE : latitude,
             ATTR_LONGITUDE : longitude
             }
-        return self.info
+        return json.dumps(self.info)
+
+    def find_first_journey(self, journeys, journeytype):
+        # Find the first journey whose first leg is of the requested type
+        journey_count = len(journeys)
+        for journey in range (0, journey_count, 1):
+            leg = self.find_first_leg(journeys[journey]['legs'], journeytype)
+            if leg is not None:
+                return journeys[journey]
+
+        # Hmm, we didn't find one
+        return None
 
 
-    def find_first_leg(self, legs):
-        # Find the first non-footpath leg
+    def find_first_leg(self, legs, legtype):
+        # Find the first leg of the requested type
         leg_count = len(legs)
         for leg in range (0, leg_count, 1):
             leg_class = legs[leg]['transportation']['product']['class']
-            #print (leg_class)
-            if leg_class < 100:
-                # 100 is the class for walking, anything less is a train, bus, etc
+
+            if leg_class == legtype or legtype == 0:
                 return leg
 
         # Hmm, we didn't find one
         return None
 
 
-    def find_last_leg(self, legs):
-        # Find the last non-footpath leg
+    def find_last_leg(self, legs, legtype):
+        # Find the last leg of the requested type
         leg_count = len(legs)
         for leg in range (leg_count - 1, -1, -1):
             leg_class = legs[leg]['transportation']['product']['class']
-            #print (leg_class)
-            if leg_class < 100:
-                # 100 is the class for walking, anything less is a train, bus, etc
+
+            if leg_class == legtype or legtype == 0:
                 return leg
 
         # Hmm, we didn't find one
         return None
 
-    def find_changes(self, legs):
+    def find_changes(self, legs, legtype):
         # Find out how often we have to change
         changes = 0
         leg_count = len(legs)
 
         for leg in range (0, leg_count, 1):
             leg_class = legs[leg]['transportation']['product']['class']
-            if leg_class < 100:
-                # 100 is the class for walking, anything less is a train, bus, etc
+            if leg_class == legtype or legtype == 0:
                 changes = changes + 1
 
         return changes - 1
@@ -280,7 +316,10 @@ class TransportNSW(object):
             5: "Bus",
             7: "Coach",
             9: "Ferry",
-            11: "School bus"
+            11: "School bus",
+            99: "Walk",
+            100: "Walk",
+            107: "Cycle"
         }
         return modes.get(iconId, None)
 
