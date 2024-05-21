@@ -14,6 +14,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=[
         'gtfs-realtime-bindings',
+        'requests'
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
