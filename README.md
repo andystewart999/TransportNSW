@@ -19,8 +19,20 @@ The source API details can be found here: https://opendata.transport.nsw.gov.au/
 ```python
 .get_trip(origin_stop_id, destination_stop_id, api_key, [trip_wait_time = 0], [transport_type = 0])
 ```
-
 TransportNSW's trip planner can work better if you use the general location IDs (eg Central Station) rather than a specific Stop ID (eg Central Station, Platform 19) for the destination, depending on the transport type.  Forcing a specific end destination sometimes results in much more complicated trips.  Also note that the API expects (and returns) the Stop IDs as strings, although so far they all appear to be numeric.
+
+### transport_type filters
+```
+1: Train
+4: Light rail
+5: Bus
+7: Coach
+9: Ferry
+11: School bus
+99: Walk
+100: Walk
+107: Cycle
+```
 
 ### Sample Code
 
@@ -37,7 +49,7 @@ print(journey)
 ```python
 {"due": 3, "origin_stop_id": "207537", "origin_name": "Mona Vale Rd at Shinfield Ave, St Ives", "departure_time": "2024-05-20T21:59:48Z", "destination_stop_id": "2000338", "destination_name": "Central Station, Platform 18, Sydney", "arrival_time": "2024-05-20T22:47:36Z", "origin_transport_type": "Bus", "origin_transport_name": "Sydney Buses Network", "origin_line_name": "195", "origin_line_name_short": "195", "changes": 1, "occupancy": "MANY_SEATS", "real_time_trip_id": "2096551", "latitude": -33.72665786743164, "longitude": 151.16305541992188}
 ```
-Fun fact:  TransportNSW's raw API output calls itself JSON, but it uses single quotes for strings in defiance of the JSON standards.  When using this wrapper the output is formatted such that `jq`, for example, is happy with.
+Fun fact:  TransportNSW's raw API output calls itself JSON, but it uses single quotes for strings in defiance of the JSON standards.  When using this wrapper the output is formatted such that `jq`, for example, is happy with it.
 
 * due: the time (in minutes) before the journey starts
 * origin_stop_id: the specific departure stop id
