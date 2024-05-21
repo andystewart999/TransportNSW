@@ -276,7 +276,12 @@ class TransportNSW(object):
         for leg in range (0, leg_count, 1):
             leg_class = legs[leg]['transportation']['product']['class']
 
-            if leg_class == legtype or legtype == 0:
+            # We've got a filter, and the leg type matches it, so return it
+            if legtype != 0 and leg_class == legtype:
+                return leg
+                
+            # We don't have a filter, and this is the first non-walk/cycle leg so return it
+            if  legtype == 0 and leg_class < 99:
                 return leg
 
         # Hmm, we didn't find one
@@ -289,7 +294,12 @@ class TransportNSW(object):
         for leg in range (leg_count - 1, -1, -1):
             leg_class = legs[leg]['transportation']['product']['class']
 
-            if leg_class == legtype or legtype == 0:
+            # We've got a filter, and the leg type matches it, so return it
+            if legtype != 0 and leg_class == legtype:
+                return leg
+                
+            # We don't have a filter, and this is the first non-walk/cycle leg so return it
+            if  legtype == 0 and leg_class < 99:
                 return leg
 
         # Hmm, we didn't find one
