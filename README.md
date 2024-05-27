@@ -17,7 +17,7 @@ The source API details can be found here: https://opendata.transport.nsw.gov.au/
 
 ### Parameters
 ```python
-.get_trip(origin_stop_id, destination_stop_id, api_key, [trip_wait_time = 0], [transport_type = 0])
+.get_trip(origin_stop_id, destination_stop_id, api_key, [trip_wait_time = 0], [transport_type = 0], [strict_transport_type = False], [raw_output = False], [number_of_trips = 1)
 ```
 TransportNSW's trip planner can work better if you use the general location IDs (eg Central Station) rather than a specific Stop ID (eg Central Station, Platform 19) for the destination, depending on the transport type.  Forcing a specific end destination sometimes results in much more complicated trips.  Also note that the API expects (and returns) the Stop IDs as strings, although so far they all appear to be numeric.
 
@@ -33,6 +33,9 @@ TransportNSW's trip planner can work better if you use the general location IDs 
 100: Walk
 107: Cycle
 ```
+If you call the function with any `travel_type` filter and set `strict_transport_type` to `True`, only journeys whose **first** leg matches the desired filter will be considered.  Otherwise the filter includes all journeys as long as **any** of the legs includes the desired travel type.
+
+`raw_output` simply returns the entire API response string as JSON, without making any changes to it.  `number_of_trips` will define how many journeys to return in this case.
 
 ### Sample Code
 
@@ -67,7 +70,6 @@ Fun fact:  TransportNSW's raw API output calls itself JSON, but it uses single q
 * latitude & longitude: The location of the vehicle, if available
 
 Please note that the origin and destination detail is just that - information about the first and last stops on the journey at the time the request was made.  We don't return any intermediate steps, transport change types etc other than the total number of changes - the assumption is that you'll know the details of your specified trip, you just want to know when the next departure is.  If you need much more detailed information then I recommend that you use the full Transport NSW trip planner website or application.
-Also note that the 'transport_type' filter, if present,  only makes sure that at least one leg of the journey includes that transport type.
 
 ## Thank you
 Thank you Dav0815 for your TransportNSW library that the vast majority of this fork is based on.  I couldn't have done it without you!
