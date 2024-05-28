@@ -17,7 +17,7 @@ The source API details can be found here: https://opendata.transport.nsw.gov.au/
 
 ### Parameters
 ```python
-.get_trip(origin_stop_id, destination_stop_id, api_key, [trip_wait_time = 0], [transport_type = 0], [strict_transport_type = False], [raw_output = False], [number_of_trips = 1)
+.get_trip(origin_stop_id, destination_stop_id, api_key, [journey_wait_time = 0], [transport_type = 0], [strict_transport_type = False], [raw_output = False], [journeys_to_return = 1])
 ```
 TransportNSW's trip planner can work better if you use the general location IDs (eg Central Station) rather than a specific Stop ID (eg Central Station, Platform 19) for the destination, depending on the transport type.  Forcing a specific end destination sometimes results in much more complicated trips.  Also note that the API expects (and returns) the Stop IDs as strings, although so far they all appear to be numeric.
 
@@ -33,13 +33,13 @@ TransportNSW's trip planner can work better if you use the general location IDs 
 100: Walk
 107: Cycle
 ```
-If you call the function with any `travel_type` filter and set `strict_transport_type` to `True`, only journeys whose **first** leg matches the desired filter will be considered.  Otherwise the filter includes all journeys as long as **any** of the legs includes the desired travel type.
+If you call the function with a `transport_type` filter and set `strict_transport_type` to `True`, only journeys whose **first** leg matches the desired filter will be considered.  Otherwise the filter includes a journey if **any** of the legs includes the desired travel type.
 
-`raw_output` simply returns the entire API response string as JSON, without making any changes to it.  `number_of_trips` will define how many journeys to return in this case.
+`raw_output` simply returns the entire API response string as JSON, without making any changes to it.
 
 ### Sample Code
 
-The following example will return the next trip that starts from a bus stop in St. Ives (207537) five minutes from now, to Central Station's general stop ID (10101100):
+The following example will return the next trip that starts from Pymble Station (207310) five minutes from now, to Gordon Station (207210).  Note that specific platforms, such as Gordon Station, Platform 3 (207263) haven't been specified so any platform combination will be accepted:
 
 **Code:**
 ```python
@@ -49,8 +49,34 @@ journey = tnsw.get_trip('207537', '10101100', 'YOUR_API_KEY', 5)
 print(journey)
 ```
 **Result:**
-```python
-{"due": 3, "origin_stop_id": "207537", "origin_name": "Mona Vale Rd at Shinfield Ave, St Ives", "departure_time": "2024-05-20T21:59:48Z", "destination_stop_id": "2000338", "destination_name": "Central Station, Platform 18, Sydney", "arrival_time": "2024-05-20T22:47:36Z", "origin_transport_type": "Bus", "origin_transport_name": "Sydney Buses Network", "origin_line_name": "195", "origin_line_name_short": "195", "changes": 1, "occupancy": "MANY_SEATS", "real_time_trip_id": "2096551", "latitude": -33.72665786743164, "longitude": 151.16305541992188}
+
+Unless `raw_output` is `True`, the return output always returns an array of journeys, even if `journeys_to_return` is 1.  The journey array is preceded by how many journeys were requested, and how many were actually returned that contained usable data:
+
+```json
+{
+  "journeys_to_return": 1,
+  "journeys_with_data": 1,
+  "journeys": [
+    {
+      "due": 6,
+      "origin_stop_id": "2073161",
+      "origin_name": "Pymble Station, Platform 1, Pymble",
+      "departure_time": "2024-05-28T22:40:24Z",
+      "destination_stop_id": "207261",
+      "destination_name": "Gordon Station, Platform 1, Gordon",
+      "arrival_time": "2024-05-28T22:42:30Z",
+      "origin_transport_type": "Train",
+      "origin_transport_name": "Sydney Trains Network",
+      "origin_line_name": "T1 North Shore & Western Line",
+      "origin_line_name_short": "T1",
+      "changes": 0,
+      "occupancy": "UNKNOWN",
+      "real_time_trip_id": "161E.1378.133.60.A.8.80758268",
+      "latitude": "n/a",
+      "longitude": "n/a"
+    }
+  ]
+}
 ```
 Fun fact:  TransportNSW's raw API output calls itself JSON, but it uses single quotes for strings in defiance of the JSON standards.  When using this wrapper the output is formatted such that `jq`, for example, is happy with it.
 
